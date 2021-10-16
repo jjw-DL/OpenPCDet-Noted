@@ -49,37 +49,42 @@ def cfg_from_list(cfg_list, config):
 
 
 def merge_new_config(config, new_config):
+    # 如果存在基础配置文件的继承，则先加载基础配置文件
     if '_BASE_CONFIG_' in new_config:
         with open(new_config['_BASE_CONFIG_'], 'r') as f:
             try:
                 yaml_config = yaml.load(f, Loader=yaml.FullLoader)
             except:
                 yaml_config = yaml.load(f)
+        # 在命令行配置中更新基础配置
         config.update(EasyDict(yaml_config))
 
     for key, val in new_config.items():
+        # 在该步骤后_BASE_CONFIG_的同名配置会被覆盖
         if not isinstance(val, dict):
             config[key] = val
             continue
         if key not in config:
             config[key] = EasyDict()
+        # 递归调用的过程中只有第一次会进入_BASE_CONFIG_
         merge_new_config(config[key], val)
-
+    # 返回的是包含所有无重复配置的字典值
     return config
 
 
 def cfg_from_yaml_file(cfg_file, config):
+    # 从配置文件中加载为字典
     with open(cfg_file, 'r') as f:
         try:
             new_config = yaml.load(f, Loader=yaml.FullLoader)
         except:
             new_config = yaml.load(f)
-
+        # 将命令行配置和配置文件合并
         merge_new_config(config=config, new_config=new_config)
 
     return config
 
-
+# EasyDict可以让你像访问属性一样访问dict里的变量
 cfg = EasyDict()
 cfg.ROOT_DIR = (Path(__file__).resolve().parent / '../').resolve()
 cfg.LOCAL_RANK = 0

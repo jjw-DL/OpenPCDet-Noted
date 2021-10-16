@@ -66,8 +66,9 @@ def mask_boxes_outside_range_numpy(boxes, limit_range, min_num_corners=1):
     if boxes.shape[1] > 7:
         boxes = boxes[:, 0:7]
     corners = boxes_to_corners_3d(boxes)  # (N, 8, 3)
-    mask = ((corners >= limit_range[0:3]) & (corners <= limit_range[3:6])).all(axis=2)
-    mask = mask.sum(axis=1) >= min_num_corners  # (N)
+    # all()函数用于判断给定的可迭代参数iterable中的所有元素是否都为TRUE，如果是返回True，否则返回False。
+    mask = ((corners >= limit_range[0:3]) & (corners <= limit_range[3:6])).all(axis=2) # (N, 8)
+    mask = mask.sum(axis=1) >= min_num_corners  # (N,) 每个box的角点数量 > 最小阈值 
 
     return mask
 
@@ -83,8 +84,8 @@ def remove_points_in_boxes3d(points, boxes3d):
     """
     boxes3d, is_numpy = common_utils.check_numpy_to_torch(boxes3d)
     points, is_numpy = common_utils.check_numpy_to_torch(points)
-    point_masks = roiaware_pool3d_utils.points_in_boxes_cpu(points[:, 0:3], boxes3d)
-    points = points[point_masks.sum(dim=0) == 0]
+    point_masks = roiaware_pool3d_utils.points_in_boxes_cpu(points[:, 0:3], boxes3d) # 返回bool值，将box内的点设置为true
+    points = points[point_masks.sum(dim=0) == 0] # 只保留box外的点云
 
     return points.numpy() if is_numpy else points
 
@@ -153,7 +154,7 @@ def enlarge_box3d(boxes3d, extra_width=(0, 0, 0)):
     """
     boxes3d, is_numpy = common_utils.check_numpy_to_torch(boxes3d)
     large_boxes3d = boxes3d.clone()
-
+    # 将box的dx, dy, dz加上extra_width
     large_boxes3d[:, 3:6] += boxes3d.new_tensor(extra_width)[None, :]
     return large_boxes3d
 

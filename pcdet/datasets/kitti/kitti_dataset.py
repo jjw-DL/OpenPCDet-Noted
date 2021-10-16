@@ -325,17 +325,17 @@ class KittiDataset(DatasetTemplate):
         import torch
         # 如果是“train”，创建的路径是  /data/kitti/gt_database
         database_save_path = Path(self.root_path) / ('gt_database' if split == 'train' else ('gt_database_%s' % split))
-        #在/data/kitti/下创建保存kitti_dbinfos_train的文件
+        # 在/data/kitti/下创建保存kitti_dbinfos_train的文件
         db_info_save_path = Path(self.root_path) / ('kitti_dbinfos_%s.pkl' % split)
         # parents=True，可以同时创建多级目录
         database_save_path.mkdir(parents=True, exist_ok=True)
         all_db_infos = {}
 
-        #传入的参数 info_path是一个.pkl文件，ROOT_DIR/data/kitti/kitti_infos_train.pkl
+        # 传入的参数info_path是一个.pkl文件，ROOT_DIR/data/kitti/kitti_infos_train.pkl
         with open(info_path, 'rb') as f:
             infos = pickle.load(f)
 
-        # 读取取infos里的每个info的信息，一个info是一帧的数据
+        # 读取infos里的每个info的信息，一个info是一帧的数据
         for k in range(len(infos)):
             # 输出的是 第几个样本 如7/780
             print('gt_database sample: %d/%d' % (k + 1, len(infos)))
@@ -344,7 +344,7 @@ class KittiDataset(DatasetTemplate):
             # 取里面的样本序列，其实就是data/kitti/ImageSets/train.txt里面的数字序列，
             # 如000000，000003,000007....
             sample_idx = info['point_cloud']['lidar_idx']
-            # 读取该bin文件类型，并将点云数据以 numpy的格式输出
+            # 读取该bin文件类型，并将点云数据以numpy的格式输出
             # points是一个数组（M,4）
             points = self.get_lidar(sample_idx)
             # 读取注释信息
@@ -354,7 +354,7 @@ class KittiDataset(DatasetTemplate):
             # difficulty：[0,1,2,-1,0,0,-1,1,...,]里面具体物体的难度，长度为总物体的个数
             difficulty = annos['difficulty']
             # bbox是一个数组，表示物体2D边框的个数，
-            # 假设有效物体为N,dontcare个数为n,则bbox：（N+n,4）
+            # 假设有效物体为N,dontcare个数为n,则bbox:(N+n,4）
             bbox = annos['bbox']
             gt_boxes = annos['gt_boxes_lidar']
 
@@ -524,6 +524,10 @@ class KittiDataset(DatasetTemplate):
 
     # 将点云与3D标注框均转至前述统一坐标定义下，送入数据基类提供的 self.prepare_data()
     def __getitem__(self, index):
+        """
+        从pkl文件中获取相应index的info，然后根据info['point_cloud']['lidar_idx']确定帧号，进行数据读取和其他info字段的读取
+        初步读取的data_dict,要传入prepare_data（dataset.py父类中定义）进行统一处理，然后即可返回
+        """
         # index = 4
         if self._merge_all_iters_to_one_epoch:
             index = index % len(self.kitti_infos)
@@ -607,7 +611,9 @@ class KittiDataset(DatasetTemplate):
 
 
 def create_kitti_infos(dataset_cfg, class_names, data_path, save_path, workers=4):
-
+    """
+    生成.pkl文件（对train/test/val均生成相应文件），提前读取点云格式、image格式、calib矩阵以及label
+    """
     dataset = KittiDataset(dataset_cfg=dataset_cfg, class_names=class_names, root_path=data_path, training=False)
     train_split, val_split = 'train', 'val'
     # 定义文件的路径和名称

@@ -12,13 +12,16 @@ import torch.multiprocessing as mp
 
 
 def check_numpy_to_torch(x):
+    # 检测输入数据是否是numpy格式，如果是，则转换为torch格式
     if isinstance(x, np.ndarray):
         return torch.from_numpy(x).float(), True
     return x, False
 
 
 def limit_period(val, offset=0.5, period=np.pi):
+    # 首先，numpy格式数据转换为torch格式
     val, is_numpy = check_numpy_to_torch(val)
+    # 将方位角限制在[-pi, pi]
     ans = val - torch.floor(val / period + offset) * period
     return ans.numpy() if is_numpy else ans
 
@@ -39,9 +42,10 @@ def rotate_points_along_z(points, angle):
     Returns:
 
     """
+    # 首先利用torch.from_numpy().float将numpy转化为torch
     points, is_numpy = check_numpy_to_torch(points)
     angle, _ = check_numpy_to_torch(angle)
-
+    # 构造旋转矩阵batch个
     cosa = torch.cos(angle)
     sina = torch.sin(angle)
     zeros = angle.new_zeros(points.shape[0])
@@ -51,12 +55,14 @@ def rotate_points_along_z(points, angle):
         -sina, cosa, zeros,
         zeros, zeros, ones
     ), dim=1).view(-1, 3, 3).float()
+    # 对点云坐标进行旋转
     points_rot = torch.matmul(points[:, :, 0:3], rot_matrix)
-    points_rot = torch.cat((points_rot, points[:, :, 3:]), dim=-1)
-    return points_rot.numpy() if is_numpy else points_rot
+    points_rot = torch.cat((points_rot, points[:, :, 3:]), dim=-1) # 将旋转后的点云与原始点云拼接
+    return points_rot.numpy() if is_numpy else points_rot # 将点云转化为numpy格式，并返回
 
 
 def mask_points_by_range(points, limit_range):
+    # 根据点云的范围产生mask，过滤点云
     mask = (points[:, 0] >= limit_range[0]) & (points[:, 0] <= limit_range[3]) \
            & (points[:, 1] >= limit_range[1]) & (points[:, 1] <= limit_range[4])
     return mask
@@ -110,7 +116,7 @@ def get_pad_params(desired_size, cur_size):
     Get padding parameters for np.pad function
     Args:
         desired_size: int, Desired padded output size
-        cur_size: int, Current size. Should always be less than or equal to cur_size
+        cur_size: int, Current size. Should always be less than or equal to desired_size
     Returns:
         pad_params: tuple(int), Number of values padded to the edges (before, after)
     """
@@ -124,6 +130,7 @@ def get_pad_params(desired_size, cur_size):
 
 
 def keep_arrays_by_name(gt_names, used_classes):
+    # 通过类别获取被保留的索引
     inds = [i for i, x in enumerate(gt_names) if x in used_classes]
     inds = np.array(inds, dtype=np.int64)
     return inds
