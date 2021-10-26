@@ -67,6 +67,9 @@ if __name__ == '__main__':
             # 'develop': PostInstallation,
         },
         ext_modules=[
+            # name定义包名 python中import iou3d_nms_cuda
+            # module为根路径
+            # sources定于与包关联的源文件(.h,.cpp,.cu)
             make_cuda_ext(
                 name='iou3d_nms_cuda',
                 module='pcdet.ops.iou3d_nms',

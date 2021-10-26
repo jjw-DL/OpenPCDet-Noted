@@ -14,6 +14,9 @@ except:
 
 
 def build_network(model_cfg, num_class, dataset):
+    """
+    调用detectors中__init__.py中的build_detector构建网络模型
+    """
     model = build_detector(
         model_cfg=model_cfg, num_class=num_class, dataset=dataset
     )
@@ -21,6 +24,9 @@ def build_network(model_cfg, num_class, dataset):
 
 
 def load_data_to_gpu(batch_dict):
+    """
+    跳过元信息和标定数据，同时根据数据类型转换数据类型，再放到gpu上
+    """
     for key, val in batch_dict.items():
         if not isinstance(val, np.ndarray):
             continue

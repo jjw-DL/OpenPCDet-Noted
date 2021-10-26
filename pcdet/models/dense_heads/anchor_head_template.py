@@ -192,7 +192,7 @@ class AnchorHeadTemplate(nn.Module):
         loc_loss = loc_loss * self.model_cfg.LOSS_CONFIG.LOSS_WEIGHTS['loc_weight']
         box_loss = loc_loss
         tb_dict = {
-            'rpn_loss_loc': loc_loss.item()
+            'rpn_loss_loc': loc_loss.item() # pytorch中的item()方法，返回张量中的元素值，与python中针对dict的item方法不同
         }
 
         if box_dir_cls_preds is not None:
@@ -214,12 +214,12 @@ class AnchorHeadTemplate(nn.Module):
         return box_loss, tb_dict
 
     def get_loss(self):
-        cls_loss, tb_dict = self.get_cls_layer_loss()
-        box_loss, tb_dict_box = self.get_box_reg_layer_loss()
-        tb_dict.update(tb_dict_box)
-        rpn_loss = cls_loss + box_loss
+        cls_loss, tb_dict = self.get_cls_layer_loss() # 计算classfiction layer的loss，tb_dict内容和cls_loss相同，形式不同，一个是torch.tensor一个是字典值
+        box_loss, tb_dict_box = self.get_box_reg_layer_loss() # 计算regression layer的loss
+        tb_dict.update(tb_dict_box) # 在tb_dict中添加tb_dict_box，在python的字典中添加值，如果添加的也是字典，用updae方法，如果是键值对则采用赋值的方式
+        rpn_loss = cls_loss + box_loss # rpn_loss是分类和回归的总损失
 
-        tb_dict['rpn_loss'] = rpn_loss.item()
+        tb_dict['rpn_loss'] = rpn_loss.item() # 在tb_dict中添加rpn_loss，此时tb_dict中包含cls_loss,reg_loss和rpn_loss
         return rpn_loss, tb_dict
 
     def generate_predicted_boxes(self, batch_size, cls_preds, box_preds, dir_cls_preds=None):

@@ -22,6 +22,9 @@ __all__ = {
 
 
 def build_detector(model_cfg, num_class, dataset):
+    """
+    根据配置文件中的网络名称，构造对应的模型
+    """
     model = __all__[model_cfg.NAME](
         model_cfg=model_cfg, num_class=num_class, dataset=dataset
     )

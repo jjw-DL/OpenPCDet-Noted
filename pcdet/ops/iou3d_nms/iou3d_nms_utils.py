@@ -57,26 +57,29 @@ def boxes_iou3d_gpu(boxes_a, boxes_b):
     assert boxes_a.shape[1] == boxes_b.shape[1] == 7
 
     # height overlap
-    boxes_a_height_max = (boxes_a[:, 2] + boxes_a[:, 5] / 2).view(-1, 1)
+    boxes_a_height_max = (boxes_a[:, 2] + boxes_a[:, 5] / 2).view(-1, 1) # (N, 1) --> (13, 1)
     boxes_a_height_min = (boxes_a[:, 2] - boxes_a[:, 5] / 2).view(-1, 1)
-    boxes_b_height_max = (boxes_b[:, 2] + boxes_b[:, 5] / 2).view(1, -1)
-    boxes_b_height_min = (boxes_b[:, 2] - boxes_b[:, 5] / 2).view(1, -1)
+    boxes_b_height_max = (boxes_b[:, 2] + boxes_b[:, 5] / 2).view(1, -1) # (1, M）--> (1, 2)
+    boxes_b_height_min = (boxes_b[:, 2] - boxes_b[:, 5] / 2).view(1, -1) 
 
     # bev overlap
-    overlaps_bev = torch.cuda.FloatTensor(torch.Size((boxes_a.shape[0], boxes_b.shape[0]))).zero_()  # (N, M)
+    # 定义bev视角的iou结果
+    overlaps_bev = torch.cuda.FloatTensor(torch.Size((boxes_a.shape[0], boxes_b.shape[0]))).zero_()  # (N, M) --> (13, 2)
+    # 调用cuda函数计算bev视角iou
     iou3d_nms_cuda.boxes_overlap_bev_gpu(boxes_a.contiguous(), boxes_b.contiguous(), overlaps_bev)
-
-    max_of_min = torch.max(boxes_a_height_min, boxes_b_height_min)
-    min_of_max = torch.min(boxes_a_height_max, boxes_b_height_max)
-    overlaps_h = torch.clamp(min_of_max - max_of_min, min=0)
+    # 取高度最小值的最大值(这里利用了broadcast机制)
+    max_of_min = torch.max(boxes_a_height_min, boxes_b_height_min) # (N, M) --> (13, 2)
+    # 取高度最大值的最小值
+    min_of_max = torch.min(boxes_a_height_max, boxes_b_height_max) # (N, M) --> (13, 2)
+    overlaps_h = torch.clamp(min_of_max - max_of_min, min=0) # 规范化
 
     # 3d iou
-    overlaps_3d = overlaps_bev * overlaps_h
+    overlaps_3d = overlaps_bev * overlaps_h # 求空间中交集的面积
 
-    vol_a = (boxes_a[:, 3] * boxes_a[:, 4] * boxes_a[:, 5]).view(-1, 1)
-    vol_b = (boxes_b[:, 3] * boxes_b[:, 4] * boxes_b[:, 5]).view(1, -1)
+    vol_a = (boxes_a[:, 3] * boxes_a[:, 4] * boxes_a[:, 5]).view(-1, 1) # (N, 1) --> (13, 1)
+    vol_b = (boxes_b[:, 3] * boxes_b[:, 4] * boxes_b[:, 5]).view(1, -1) # (1, M）--> (1, 2)
 
-    iou3d = overlaps_3d / torch.clamp(vol_a + vol_b - overlaps_3d, min=1e-6)
+    iou3d = overlaps_3d / torch.clamp(vol_a + vol_b - overlaps_3d, min=1e-6) # 正则化
 
     return iou3d
 
@@ -89,13 +92,22 @@ def nms_gpu(boxes, scores, thresh, pre_maxsize=None, **kwargs):
     :return:
     """
     assert boxes.shape[1] == 7
+    # 对分数按列降序排序(从大到小)，并取出对应索引
+    # dim=0 按列排序，dim=1 按行排序，默认 dim=1
+    # 因为传入的scores已经有序，所以order就是[1 2 3 ...]
     order = scores.sort(0, descending=True)[1]
+    # 如果存在NMS前的最大box数量（4096），则取出前4096个box索引
     if pre_maxsize is not None:
         order = order[:pre_maxsize]
 
+    # 取出NMS前的box
     boxes = boxes[order].contiguous()
-    keep = torch.LongTensor(boxes.size(0))
+    keep = torch.LongTensor(boxes.size(0)) # 构造一个4096维向量
+    # 调用cuda函数进行加速
+    # keep：记录保留目标框的下标
+    # num_out：返回保留下来的个数
     num_out = iou3d_nms_cuda.nms_gpu(boxes, keep, thresh)
+    # 最后， 之所以所以要取前num_out个数的原因是keep初始的长度为4096
     return order[keep[:num_out].cuda()].contiguous(), None
 
 

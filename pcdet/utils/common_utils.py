@@ -88,15 +88,23 @@ def get_voxel_centers(voxel_coords, downsample_times, voxel_size, point_cloud_ra
 
 
 def create_logger(log_file=None, rank=0, log_level=logging.INFO):
-    logger = logging.getLogger(__name__)
-    logger.setLevel(log_level if rank == 0 else 'ERROR')
-    formatter = logging.Formatter('%(asctime)s  %(levelname)5s  %(message)s')
+    # https://www.cnblogs.com/yyds/p/6901864.html
+    # 初始化日志记录器：logger = logging.getLogger(logger_name)
+    # 当直接执行一段脚本的时候，这段脚本的 __name__变量等于 '__main__'
+    # 当这段脚本被导入其他程序的时候，__name__ 变量等于脚本本身的名字
+    # 日志器（logger）是入口，真正干活儿的是处理器（handler），处理器（handler）还可以
+    # 通过过滤器（filter）和格式器（formatter）对要输出的日志内容做过滤和格式化等处理操作
+    logger = logging.getLogger(__name__) 
+    logger.setLevel(log_level if rank == 0 else 'ERROR') # 设置日志级别为INFO，即只有日志级别大于等于INFO的日志才会输出
+    formatter = logging.Formatter('%(asctime)s  %(levelname)5s  %(message)s') # 设置日志格式
+    # handler：将日志记录（log record）发送到合适的目的地（destination），比如文件，socket和控制台等。
+    # 一个logger对象可以通过addHandler方法添加0到多个handler，每个handler又可以定义不同日志级别，以实现日志分级过滤显示。
     console = logging.StreamHandler()
     console.setLevel(log_level if rank == 0 else 'ERROR')
     console.setFormatter(formatter)
     logger.addHandler(console)
     if log_file is not None:
-        file_handler = logging.FileHandler(filename=log_file)
+        file_handler = logging.FileHandler(filename=log_file) # 将日志消息发送到文件
         file_handler.setLevel(log_level if rank == 0 else 'ERROR')
         file_handler.setFormatter(formatter)
         logger.addHandler(file_handler)
