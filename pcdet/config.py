@@ -5,9 +5,11 @@ from easydict import EasyDict
 
 
 def log_config_to_file(cfg, pre='cfg', logger=None):
+    # 遍历cfg的字典值，写入log文件， 在train或test中调用
     for key, val in cfg.items():
         if isinstance(cfg[key], EasyDict):
             logger.info('\n%s.%s = edict()' % (pre, key))
+            # 在递归的过程中pre（前缀）在不断更新
             log_config_to_file(cfg[key], pre=pre + '.' + key, logger=logger)
             continue
         logger.info('%s.%s: %s' % (pre, key, val))

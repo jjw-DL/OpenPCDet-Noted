@@ -42,7 +42,25 @@ class DistributedSampler(_DistributedSampler):
 
 def build_dataloader(dataset_cfg, class_names, batch_size, dist, root_path=None, workers=4,
                      logger=None, training=True, merge_all_iters_to_one_epoch=False, total_epochs=0):
-    # 根据数据集名称，初始化数据集
+    """
+    构建数据集并调用DataLoader进行加载
+    Args:
+        dataset_cfg: 数据集配置文件
+        class_names: 类比名称
+        batch_size: batch的大小
+        dist: 是否并行训练
+        root_path: 根目录
+        workers: 线程数
+        logger： 日志记录器
+        training: 训练模式
+        merge_all_iters_to_one_epoch: 是否将所有迭代次数合并到一个epoch
+        total_epochs: 总epoch数
+    Returns
+        dataset: 数据集
+        dataloader: 数据加载器
+        sampler: 数据采样器
+    """
+    # 根据数据集名称，初始化数据集，即只执行__init__函数
     dataset = __all__[dataset_cfg.DATASET](
         dataset_cfg=dataset_cfg,
         class_names=class_names,
@@ -63,6 +81,7 @@ def build_dataloader(dataset_cfg, class_names, batch_size, dist, root_path=None,
             sampler = DistributedSampler(dataset, world_size, rank, shuffle=False)
     else:
         sampler = None
+    # 初始化DataLoader，此时并没有进行数据采样和加载，只有在训练中才会按照batch size调用__getitem__加载数据
     # 在单卡训练中进行，通过DataLoader进行数据加载
     dataloader = DataLoader(
         dataset, batch_size=batch_size, pin_memory=True, num_workers=workers,

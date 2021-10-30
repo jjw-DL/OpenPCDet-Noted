@@ -35,9 +35,9 @@ class Detector3DTemplate(nn.Module):
     def build_networks(self):
         model_info_dict = {
             'module_list': [], # 模块列表
-            'num_rawpoint_features': self.dataset.point_feature_encoder.num_point_features, # 点特征数量
+            'num_rawpoint_features': self.dataset.point_feature_encoder.num_point_features, # 点特征数量 4 这里是调用函数获取
             'num_point_features': self.dataset.point_feature_encoder.num_point_features, 
-            'grid_size': self.dataset.grid_size, # 网格大小
+            'grid_size': self.dataset.grid_size, # 网格大小 （432,496, 1） 直接根据dataset属性获取
             'point_cloud_range': self.dataset.point_cloud_range, # 点云范围
             'voxel_size': self.dataset.voxel_size, # 体素大小
             'depth_downsample_factor': self.dataset.depth_downsample_factor # 下采样因子
@@ -56,7 +56,8 @@ class Detector3DTemplate(nn.Module):
         # 如果模型配置不存在该模块，则直接返回None
         if self.model_cfg.get('VFE', None) is None:
             return None, model_info_dict
-        # 根据配置文件设置vfe模块的参数，返回子模块
+        # 根据配置文件初始化vfe模块的参数，返回子模块，比如pillar_vfe, mean_vfe和image_vfe
+        # 但是这里只是初始化，并没有调用forward函数
         vfe_module = vfe.__all__[self.model_cfg.VFE.NAME](
             model_cfg=self.model_cfg.VFE,
             num_point_features=model_info_dict['num_rawpoint_features'],

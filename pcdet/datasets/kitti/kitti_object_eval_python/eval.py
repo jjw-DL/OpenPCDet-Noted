@@ -643,14 +643,16 @@ def get_official_eval_result(gt_annos, dt_annos, current_classes, PR_detail_dict
     overlap_0_5 = np.array([[0.7, 0.5, 0.5, 0.7,
                              0.5, 0.5], [0.5, 0.25, 0.25, 0.5, 0.25, 0.5],
                             [0.5, 0.25, 0.25, 0.5, 0.25, 0.5]])
+    # 目的就是给不同的类别设置不同的阈值
+    # 每个类别输出2*2个结果，AP或AP_R40，overlap=0.7或0.5
     min_overlaps = np.stack([overlap_0_7, overlap_0_5], axis=0)  # [2, 3, 5]
     class_to_name = {
-        0: 'Car',
-        1: 'Pedestrian',
-        2: 'Cyclist',
-        3: 'Van',
-        4: 'Person_sitting',
-        5: 'Truck'
+        0: 'Car', 			#[[0.7,0.7,0.7],[0.7, 0.5, 0.5]]
+        1: 'Pedestrian',	#[[0.5,0.5,0.5],[0.5,0.25,0.25]]
+        2: 'Cyclist',		#[[0.5,0.5,0.5],[0.5,0.25,0.25]]
+        3: 'Van',			#[[0.7,0.7,0.7],[0.7, 0.5, 0.5]]
+        4: 'Person_sitting',#[[0.5,0.5,0.5],[0.5,0.25,0.25]]
+        5: 'Truck'			#[[0.7,0.7,0.7],[0.5, 0.5, 0.5]]
     }
     name_to_class = {v: n for n, v in class_to_name.items()}
     if not isinstance(current_classes, (list, tuple)):
@@ -671,9 +673,12 @@ def get_official_eval_result(gt_annos, dt_annos, current_classes, PR_detail_dict
             if anno['alpha'][0] != -10:
                 compute_aos = True
             break
+    
+    # 计算结果的函数do_eval()
     mAPbbox, mAPbev, mAP3d, mAPaos, mAPbbox_R40, mAPbev_R40, mAP3d_R40, mAPaos_R40 = do_eval(
         gt_annos, dt_annos, current_classes, min_overlaps, compute_aos, PR_detail_dict=PR_detail_dict)
 
+    # 打印结果
     ret_dict = {}
     for j, curcls in enumerate(current_classes):
         # mAP threshold array: [num_minoverlap, metric, class]

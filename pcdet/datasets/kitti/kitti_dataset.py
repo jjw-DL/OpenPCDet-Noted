@@ -26,7 +26,7 @@ class KittiDataset(DatasetTemplate):
         )
         # 传递参数是 训练集train 还是验证集val
         self.split = self.dataset_cfg.DATA_SPLIT[self.mode]
-        # root_path的路径是/data/kitti/
+        # root_path的路径是../data/kitti/
         # kitti数据集一共三个文件夹“training”和“testing”、“ImageSets”
         # 如果是训练集train，将文件的路径指为训练集training ，否则为测试集testing
         self.root_split_path = self.root_path / ('training' if self.split != 'test' else 'testing')
@@ -522,7 +522,7 @@ class KittiDataset(DatasetTemplate):
         #等于返回训练帧的总个数，等于图片的总个数，帧的总个数
         return len(self.kitti_infos)
 
-    # 将点云与3D标注框均转至前述统一坐标定义下，送入数据基类提供的 self.prepare_data()
+    # 将点云与3D标注框均转至前述统一坐标定义下，送入数据基类提供的self.prepare_data()
     def __getitem__(self, index):
         """
         从pkl文件中获取相应index的info，然后根据info['point_cloud']['lidar_idx']确定帧号，进行数据读取和其他info字段的读取

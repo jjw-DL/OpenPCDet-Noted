@@ -82,7 +82,15 @@ def listify(p=None, q=None):
         p = [p]
     elif not isinstance(p, Iterable):
         p = [p]
-    n = q if type(q) == int else len(p) if q is None else len(q)
+    n = q if type(q) == int else len(p) if q is None else len(q) # n:1
+    """
+    if type(q) == int:
+        n = q
+    elif(q is none):
+        n = len(p)
+    else:
+        n = len(q)
+    """
     if len(p) == 1: p = p * n
     assert len(p) == n, f'List len mismatch ({len(p)} vs {n})'
     return list(p)
@@ -90,6 +98,8 @@ def listify(p=None, q=None):
 
 def trainable_params(m: nn.Module):
     "Return list of trainable params in `m`."
+    # filter() 函数用于过滤序列，过滤掉不符合条件的元素，返回由符合条件元素组成的新列表
+    # filter(function, iterable)
     res = filter(lambda p: p.requires_grad, m.parameters())
     return res
 
@@ -112,10 +122,11 @@ class OptimWrapper():
     def create(cls, opt_func, lr,
                layer_groups, **kwargs):
         "Create an `optim.Optimizer` from `opt_func` with `lr`. Set lr on `layer_groups`."
-        split_groups = split_bn_bias(layer_groups)
-        opt = opt_func([{'params': trainable_params(l), 'lr': 0} for l in split_groups])
-        opt = cls(opt, **kwargs)
-        opt.lr, opt.opt_func = listify(lr, layer_groups), opt_func
+        split_groups = split_bn_bias(layer_groups) # 一个list中含有两个元素，第一个是non-batchnorm groups第二个是batchnorm groups
+        opt = opt_func([{'params': trainable_params(l), 'lr': 0} for l in split_groups]) # 将param设置为两组中的可学习参数，学习率初始化为0
+        # cls is the constructor function, it will construct class and call the __init__(self,) function.
+        opt = cls(opt, **kwargs) # 设置学习率等参数
+        opt.lr, opt.opt_func = listify(lr, layer_groups), opt_func # lr:0.03, opt_func:adam
         return opt
 
     def new(self, layer_groups):
@@ -227,7 +238,7 @@ class OptimWrapper():
 
     def read_val(self, key: str):
         "Read a hyperparameter `key` in the optimizer dictionary."
-        val = [pg[key] for pg in self.opt.param_groups[::2]]
+        val = [pg[key] for pg in self.opt.param_groups[::2]] # 以2为间隔
         if is_tuple(val[0]): val = [o[0] for o in val], [o[1] for o in val]
         return val
 
