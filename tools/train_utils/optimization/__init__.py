@@ -20,7 +20,7 @@ def build_optimizer(model, optim_cfg):
         )
     # 如果采用adam_onecycle优化器
     elif optim_cfg.OPTIMIZER == 'adam_onecycle':
-        # 
+        
         def children(m: nn.Module):
             # 取出该模块中的各个子模块，组成list
             return list(m.children())
