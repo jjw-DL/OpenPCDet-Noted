@@ -66,7 +66,7 @@ class DataProcessor(object):
 
     def transform_points_to_voxels(self, data_dict=None, config=None, voxel_generator=None):
         """
-        将点云转换为voxel,调用了spconv的VoxelGeneratorV2
+        将点云转换为voxel,调用spconv的VoxelGeneratorV2
         """
         if data_dict is None:
             try:

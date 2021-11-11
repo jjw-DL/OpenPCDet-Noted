@@ -249,6 +249,7 @@ def boxes3d_kitti_camera_to_imageboxes(boxes3d, calib, image_shape=None):
 
 def boxes_iou_normal(boxes_a, boxes_b):
     """
+    正常计算两个box的iou（没有旋转角）
     Args:
         boxes_a: (N, 4) [x1, y1, x2, y2]
         boxes_b: (M, 4) [x1, y1, x2, y2]
@@ -272,12 +273,14 @@ def boxes_iou_normal(boxes_a, boxes_b):
 
 def boxes3d_lidar_to_aligned_bev_boxes(boxes3d):
     """
+    将lidar坐标系下的box3d转换到bev视角
     Args:
         boxes3d: (N, 7 + C) [x, y, z, dx, dy, dz, heading] in lidar coordinate
 
     Returns:
         aligned_bev_boxes: (N, 4) [x1, y1, x2, y2] in the above lidar coordinate
     """
+    # 先将方位角限制在-pi到pi，然后取绝对值，在0到pi之间
     rot_angle = common_utils.limit_period(boxes3d[:, 6], offset=0.5, period=np.pi).abs()
     choose_dims = torch.where(rot_angle[:, None] < np.pi / 4, boxes3d[:, [3, 4]], boxes3d[:, [4, 3]])
     aligned_bev_boxes = torch.cat((boxes3d[:, 0:2] - choose_dims / 2, boxes3d[:, 0:2] + choose_dims / 2), dim=1)
@@ -289,7 +292,6 @@ def boxes3d_nearest_bev_iou(boxes_a, boxes_b):
     Args:
         boxes_a: (N, 7) [x, y, z, dx, dy, dz, heading]
         boxes_b: (N, 7) [x, y, z, dx, dy, dz, heading]
-
     Returns:
 
     """

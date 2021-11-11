@@ -4,9 +4,12 @@ import torch
 
 class ResidualCoder(object):
     def __init__(self, code_size=7, encode_angle_by_sincos=False, **kwargs):
+        """
+        loss中anchor和gt的编码与解码
+        """
         super().__init__()
-        self.code_size = code_size
-        self.encode_angle_by_sincos = encode_angle_by_sincos
+        self.code_size = code_size # 7
+        self.encode_angle_by_sincos = encode_angle_by_sincos # Fasle
         if self.encode_angle_by_sincos:
             self.code_size += 1
 
@@ -19,25 +22,28 @@ class ResidualCoder(object):
         Returns:
 
         """
-        anchors[:, 3:6] = torch.clamp_min(anchors[:, 3:6], min=1e-5)
-        boxes[:, 3:6] = torch.clamp_min(boxes[:, 3:6], min=1e-5)
-
+        anchors[:, 3:6] = torch.clamp_min(anchors[:, 3:6], min=1e-5) # 截断anchors的[dx,dy,dz]
+        boxes[:, 3:6] = torch.clamp_min(boxes[:, 3:6], min=1e-5) # 截断boxes的[dx,dy,dz]
+        # If split_size_or_sections is an integer type, then tensor will be split into equally sized chunks (if possible). 
+        # Last chunk will be smaller if the tensor size along the given dimension dim is not divisible by split_size.
+        # 这里指torch.split的第二个参数
         xa, ya, za, dxa, dya, dza, ra, *cas = torch.split(anchors, 1, dim=-1)
         xg, yg, zg, dxg, dyg, dzg, rg, *cgs = torch.split(boxes, 1, dim=-1)
-
+        # 计算anchor对角线长度
         diagonal = torch.sqrt(dxa ** 2 + dya ** 2)
-        xt = (xg - xa) / diagonal
-        yt = (yg - ya) / diagonal
-        zt = (zg - za) / dza
-        dxt = torch.log(dxg / dxa)
-        dyt = torch.log(dyg / dya)
-        dzt = torch.log(dzg / dza)
+        # 计算loss的公式，Δx,Δy,Δz,Δw,Δl,Δh,Δθ
+        xt = (xg - xa) / diagonal # Δx
+        yt = (yg - ya) / diagonal # Δy
+        zt = (zg - za) / dza # Δz
+        dxt = torch.log(dxg / dxa) # Δw
+        dyt = torch.log(dyg / dya) # Δl
+        dzt = torch.log(dzg / dza) # Δh
         if self.encode_angle_by_sincos:
             rt_cos = torch.cos(rg) - torch.cos(ra)
             rt_sin = torch.sin(rg) - torch.sin(ra)
             rts = [rt_cos, rt_sin]
         else:
-            rts = [rg - ra]
+            rts = [rg - ra] # Δθ
 
         cts = [g - a for g, a in zip(cgs, cas)]
         return torch.cat([xt, yt, zt, dxt, dyt, dzt, *rts, *cts], dim=-1)
@@ -51,21 +57,24 @@ class ResidualCoder(object):
         Returns:
 
         """
-        xa, ya, za, dxa, dya, dza, ra, *cas = torch.split(anchors, 1, dim=-1)
+        # 分割anchor
+        xa, ya, za, dxa, dya, dza, ra, *cas = torch.split(anchors, 1, dim=-1) # (B, N, 1)-->(1, 321408, 1)
+        # 分割编码后的box
         if not self.encode_angle_by_sincos:
-            xt, yt, zt, dxt, dyt, dzt, rt, *cts = torch.split(box_encodings, 1, dim=-1)
+            xt, yt, zt, dxt, dyt, dzt, rt, *cts = torch.split(box_encodings, 1, dim=-1) # cts = []
         else:
             xt, yt, zt, dxt, dyt, dzt, cost, sint, *cts = torch.split(box_encodings, 1, dim=-1)
-
-        diagonal = torch.sqrt(dxa ** 2 + dya ** 2)
+        # 计算anchor对角线长度
+        diagonal = torch.sqrt(dxa ** 2 + dya ** 2) # (B, N, 1)-->(1, 321408, 1)
+        # loss计算的逆变换:g表示gt，a表示anchor
         xg = xt * diagonal + xa
         yg = yt * diagonal + ya
         zg = zt * dza + za
-
+        
         dxg = torch.exp(dxt) * dxa
         dyg = torch.exp(dyt) * dya
         dzg = torch.exp(dzt) * dza
-
+        # 如果角度是cos和sin编码，采用新的解码方式
         if self.encode_angle_by_sincos:
             rg_cos = cost + torch.cos(ra)
             rg_sin = sint + torch.sin(ra)
@@ -73,7 +82,7 @@ class ResidualCoder(object):
         else:
             rg = rt + ra
 
-        cgs = [t + a for t, a in zip(cts, cas)]
+        cgs = [t + a for t, a in zip(cts, cas)] # []
         return torch.cat([xg, yg, zg, dxg, dyg, dzg, rg, *cgs], dim=-1)
 
 
