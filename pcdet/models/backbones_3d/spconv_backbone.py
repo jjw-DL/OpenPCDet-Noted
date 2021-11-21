@@ -6,7 +6,9 @@ import torch.nn as nn
 
 def post_act_block(in_channels, out_channels, kernel_size, indice_key=None, stride=1, padding=0,
                    conv_type='subm', norm_fn=None):
-
+    """
+    后处理执行块，根据conv_type选择对应的卷积操作并和norm与激活函数封装为块
+    """
     if conv_type == 'subm':
         conv = spconv.SubMConv3d(in_channels, out_channels, kernel_size, bias=False, indice_key=indice_key)
     elif conv_type == 'spconv':
@@ -68,10 +70,10 @@ class SparseBasicBlock(spconv.SparseModule):
 class VoxelBackBone8x(nn.Module):
     def __init__(self, model_cfg, input_channels, grid_size, **kwargs):
         super().__init__()
-        self.model_cfg = model_cfg
+        self.model_cfg = model_cfg # NAME: VoxelBackBone8x
         norm_fn = partial(nn.BatchNorm1d, eps=1e-3, momentum=0.01)
 
-        self.sparse_shape = grid_size[::-1] + [1, 0, 0]
+        self.sparse_shape = grid_size[::-1] + [1, 0, 0] # [41, 1600, 1408] 在原始网格的高度方向上增加了一维
 
         self.conv_input = spconv.SparseSequential(
             spconv.SubMConv3d(input_channels, 16, 3, padding=1, bias=False, indice_key='subm1'),
@@ -85,21 +87,21 @@ class VoxelBackBone8x(nn.Module):
         )
 
         self.conv2 = spconv.SparseSequential(
-            # [1600, 1408, 41] <- [800, 704, 21]
+            # [1600, 1408, 41] -> [800, 704, 21]
             block(16, 32, 3, norm_fn=norm_fn, stride=2, padding=1, indice_key='spconv2', conv_type='spconv'),
             block(32, 32, 3, norm_fn=norm_fn, padding=1, indice_key='subm2'),
             block(32, 32, 3, norm_fn=norm_fn, padding=1, indice_key='subm2'),
         )
 
         self.conv3 = spconv.SparseSequential(
-            # [800, 704, 21] <- [400, 352, 11]
+            # [800, 704, 21] -> [400, 352, 11]
             block(32, 64, 3, norm_fn=norm_fn, stride=2, padding=1, indice_key='spconv3', conv_type='spconv'),
             block(64, 64, 3, norm_fn=norm_fn, padding=1, indice_key='subm3'),
             block(64, 64, 3, norm_fn=norm_fn, padding=1, indice_key='subm3'),
         )
 
         self.conv4 = spconv.SparseSequential(
-            # [400, 352, 11] <- [200, 176, 5]
+            # [400, 352, 11] -> [200, 176, 5]
             block(64, 64, 3, norm_fn=norm_fn, stride=2, padding=(0, 1, 1), indice_key='spconv4', conv_type='spconv'),
             block(64, 64, 3, norm_fn=norm_fn, padding=1, indice_key='subm4'),
             block(64, 64, 3, norm_fn=norm_fn, padding=1, indice_key='subm4'),
@@ -129,24 +131,25 @@ class VoxelBackBone8x(nn.Module):
         Args:
             batch_dict:
                 batch_size: int
-                vfe_features: (num_voxels, C)
-                voxel_coords: (num_voxels, 4), [batch_idx, z_idx, y_idx, x_idx]
+                vfe_features: (num_voxels, C) (64000, 4)
+                voxel_coords: (num_voxels, 4), [batch_idx, z_idx, y_idx, x_idx] (64000, 4)
         Returns:
             batch_dict:
                 encoded_spconv_tensor: sparse tensor
         """
-        voxel_features, voxel_coords = batch_dict['voxel_features'], batch_dict['voxel_coords']
-        batch_size = batch_dict['batch_size']
+        voxel_features, voxel_coords = batch_dict['voxel_features'], batch_dict['voxel_coords'] # (64000, 4), (64000, 4)
+        batch_size = batch_dict['batch_size'] # 4
+        # 根据voxel特征和坐标以及空间形状和batch，建立稀疏tensor
         input_sp_tensor = spconv.SparseConvTensor(
-            features=voxel_features,
-            indices=voxel_coords.int(),
-            spatial_shape=self.sparse_shape,
-            batch_size=batch_size
+            features=voxel_features, # (64000, 4)
+            indices=voxel_coords.int(), # (64000, 4)
+            spatial_shape=self.sparse_shape, # （41, 1600, 1408）
+            batch_size=batch_size # 4
         )
 
-        x = self.conv_input(input_sp_tensor)
+        x = self.conv_input(input_sp_tensor) # （4, 4, 41, 1600, 1408）
 
-        x_conv1 = self.conv1(x)
+        x_conv1 = self.conv1(x) # （4, 16, 41, 1600, 1408）
         x_conv2 = self.conv2(x_conv1)
         x_conv3 = self.conv3(x_conv2)
         x_conv4 = self.conv4(x_conv3)
@@ -154,7 +157,7 @@ class VoxelBackBone8x(nn.Module):
         # for detection head
         # [200, 176, 5] -> [200, 176, 2]
         out = self.conv_out(x_conv4)
-
+        # 将输出特征图和各尺度的3d特征图存入batch_dict
         batch_dict.update({
             'encoded_spconv_tensor': out,
             'encoded_spconv_tensor_stride': 8

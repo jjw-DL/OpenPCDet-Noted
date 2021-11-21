@@ -19,12 +19,12 @@ MODEL:
 
     BACKBONE_2D:
         NAME: BaseBEVBackbone
-
-        LAYER_NUMS: [5, 5]
-        LAYER_STRIDES: [1, 2]
-        NUM_FILTERS: [128, 256]
-        UPSAMPLE_STRIDES: [1, 2]
-        NUM_UPSAMPLE_FILTERS: [256, 256]
+        # 一个下采样块对应一个上采样块
+        LAYER_NUMS: [5, 5] # 每个layer内conv2d重复的次数
+        LAYER_STRIDES: [1, 2] # 长宽是否减半
+        NUM_FILTERS: [128, 256] # 下采样通道数
+        UPSAMPLE_STRIDES: [1, 2] # 上采样倍率
+        NUM_UPSAMPLE_FILTERS: [256, 256] # 上采样通道数
 
     DENSE_HEAD:
         NAME: AnchorHeadSingle
