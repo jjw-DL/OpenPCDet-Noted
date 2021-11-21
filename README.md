@@ -1,3 +1,11 @@
+# OpenPCDet代码分析与注释 已完成PointPillar和Second的分析
+## 先看博客和流程图完成整体分析，再看代码注释，调试完成细节分析
+- 整体分析包括:datasets、tools、ops的iou3d_nms和models的detectors等内容 https://zhuanlan.zhihu.com/p/427609274
+- OpenPCDet-KITTI 3D数据集评价指标-eval.py详细解读（1）https://zhuanlan.zhihu.com/p/428717657
+- OpenPCDet-KITTI 3D数据集评价指标-eval.py详细解读（2）https://zhuanlan.zhihu.com/p/428821772
+- PointPillar代码解析 https://zhuanlan.zhihu.com/p/432205459
+- 关于second中的3D稀疏卷积以及spconv库的相关解析后续更新
+## 如果觉得还行，可以给个star呀！博客也可以给个赞哈！！！
 <img src="docs/open_mmlab.png" align="right" width="30%">
 
 # OpenPCDet
