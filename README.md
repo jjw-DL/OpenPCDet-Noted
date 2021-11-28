@@ -1,4 +1,5 @@
-# OpenPCDet代码分析与注释 已完成PointPillar和Second的分析
+# OpenPCDet代码分析与注释 
+## 已完成PointPillar和Second的分析
 ## 先看博客和流程图完成整体分析，再看代码注释，调试完成细节分析
 - 整体分析包括:datasets、tools、ops的iou3d_nms和models的detectors等内容 https://zhuanlan.zhihu.com/p/427609274
 - OpenPCDet-KITTI 3D数据集评价指标-eval.py详细解读（1）https://zhuanlan.zhihu.com/p/428717657
