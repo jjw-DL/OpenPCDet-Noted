@@ -83,8 +83,11 @@ class Detector3DTemplate(nn.Module):
             voxel_size=model_info_dict['voxel_size'],
             point_cloud_range=model_info_dict['point_cloud_range']
         )
+        # 添加该模块
         model_info_dict['module_list'].append(backbone_3d_module)
+        # 更改点云特征维度
         model_info_dict['num_point_features'] = backbone_3d_module.num_point_features
+        # 增加字段
         model_info_dict['backbone_channels'] = backbone_3d_module.backbone_channels \
             if hasattr(backbone_3d_module, 'backbone_channels') else None
         return backbone_3d_module, model_info_dict
@@ -331,7 +334,7 @@ class Detector3DTemplate(nn.Module):
             recall_dict:召回率字典（随着预测帧数更新）
             batch_index:预测数据索引
             data_dict: 原始预测数据字典
-            thresh_list：阈值列表[0.3, 0.5, 0.7]
+            thresh_list:阈值列表[0.3, 0.5, 0.7]
         """
         # 如果data_dict中不存在'gt_boxes',无法计算recall,则保持原值并直接返回
         if 'gt_boxes' not in data_dict:
@@ -399,7 +402,7 @@ class Detector3DTemplate(nn.Module):
         1.torch.load(filename, map_location=loc_type)
         2.self.load_state_dict(state_dict)
         """
-        # 如何文件名不是文件，报异常
+        # 如果文件名不是文件，报异常
         if not os.path.isfile(filename):
             raise FileNotFoundError
 
@@ -464,7 +467,7 @@ class Detector3DTemplate(nn.Module):
 
         # 更新优化器参数
         if optimizer is not None:
-            # 检查optimizer_state是否在checkpoit中，如果存在则更新
+            # 检查optimizer_state是否在checkpoint中，如果存在则更新
             if 'optimizer_state' in checkpoint and checkpoint['optimizer_state'] is not None:
                 logger.info('==> Loading optimizer parameters from checkpoint %s to %s'
                             % (filename, 'CPU' if to_cpu else 'GPU'))

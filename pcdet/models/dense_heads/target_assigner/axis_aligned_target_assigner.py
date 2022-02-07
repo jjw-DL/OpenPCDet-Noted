@@ -114,6 +114,7 @@ class AxisAlignedTargetAssigner(object):
                 target_dict['box_cls_labels'] = torch.cat(target_dict['box_cls_labels'], dim=0).view(-1)
                 target_dict['reg_weights'] = torch.cat(target_dict['reg_weights'], dim=0).view(-1)
             else:
+                # 对该帧各类anchor的assign结果进行view并拼接
                 target_dict = {
                     'box_cls_labels': [t['box_cls_labels'].view(*feature_map_size, -1) for t in target_list], # feature_map_size:(1，248，216）--> (1，248，216, 2)
                     'box_reg_targets': [t['box_reg_targets'].view(*feature_map_size, -1, self.box_coder.code_size) # (1，248，216, 2, 7)

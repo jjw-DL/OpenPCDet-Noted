@@ -52,9 +52,9 @@ class DataBaseSampler(object):
                 continue
             self.sample_class_num[class_name] = sample_num
             self.sample_groups[class_name] = {
-                'sample_num': sample_num,
-                'pointer': len(self.db_infos[class_name]),
-                'indices': np.arange(len(self.db_infos[class_name]))
+                'sample_num': sample_num, # 采样个数
+                'pointer': len(self.db_infos[class_name]), # 该类别总数
+                'indices': np.arange(len(self.db_infos[class_name])) # 采样索引
             }
 
     def __getstate__(self):
@@ -105,10 +105,10 @@ class DataBaseSampler(object):
         """
         随机采样指定数量的infos
         Args:
-            class_name:
-            sample_group:
+            class_name: 类别名称
+            sample_group: 采样组
         Returns:
-
+            sampled_dict: 采样db_info的list
         """
         sample_num, pointer, indices = int(sample_group['sample_num']), sample_group['pointer'], sample_group['indices']
         # 随机打乱索引
@@ -158,6 +158,7 @@ class DataBaseSampler(object):
             data_dict.pop('road_plane')
 
         obj_points_list = []
+        # 逐个采样box处理
         for idx, info in enumerate(total_valid_sampled_dict):
             file_path = self.root_path / info['path'] # data/kitti/gt_database/000003_Car_0.bin
             obj_points = np.fromfile(str(file_path), dtype=np.float32).reshape(
@@ -200,10 +201,11 @@ class DataBaseSampler(object):
         gt_names = data_dict['gt_names'].astype(str) # (N,)
         existed_boxes = gt_boxes # 已经存在的boxes
         total_valid_sampled_dict = [] # 全部有效的采样字典
+        # 逐类别进行采样
         for class_name, sample_group in self.sample_groups.items():
             if self.limit_whole_scene: # 限制整个点云中box的数量
                 num_gt = np.sum(class_name == gt_names)
-                sample_group['sample_num'] = str(int(self.sample_class_num[class_name]) - num_gt)
+                sample_group['sample_num'] = str(int(self.sample_class_num[class_name]) - num_gt) # 计算要采样的数量
             if int(sample_group['sample_num']) > 0: # 如果采样box的数量大于0
                 sampled_dict = self.sample_with_fixed_number(class_name, sample_group) # 在db_infos[calss_name]中随机采样sample_num个box信息
 

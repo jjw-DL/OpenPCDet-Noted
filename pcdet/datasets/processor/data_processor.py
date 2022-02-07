@@ -11,8 +11,8 @@ class DataProcessor(object):
     数据预处理类
     Args:
         processor_configs: DATA_CONFIG.DATA_PROCESSOR
-        point_cloud_range： 点云范围
-        training：训练模式
+        point_cloud_range:点云范围
+        training:训练模式
     """
     def __init__(self, processor_configs, point_cloud_range, training):
         self.point_cloud_range = point_cloud_range # [0, -39.68, -3, 69.12, 39.68, 1]

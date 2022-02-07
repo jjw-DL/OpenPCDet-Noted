@@ -14,7 +14,7 @@ class DataAugmentor(object):
             root_path: 根目录
             augmentor_configs: 增强器配置
             class_names: 类别名
-            logger：日志
+            logger:日志
         """
         self.root_path = root_path
         self.class_names = class_names

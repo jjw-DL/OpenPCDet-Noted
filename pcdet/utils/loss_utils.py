@@ -226,18 +226,18 @@ def get_corner_loss_lidar(pred_bbox3d: torch.Tensor, gt_bbox3d: torch.Tensor):
         corner_loss: (N) float Tensor.
     """
     assert pred_bbox3d.shape[0] == gt_bbox3d.shape[0]
-
-    pred_box_corners = box_utils.boxes_to_corners_3d(pred_bbox3d)
-    gt_box_corners = box_utils.boxes_to_corners_3d(gt_bbox3d)
+    # 将box转为角点形式
+    pred_box_corners = box_utils.boxes_to_corners_3d(pred_bbox3d) # (2, 8, 3)
+    gt_box_corners = box_utils.boxes_to_corners_3d(gt_bbox3d) # (2, 8, 3)
 
     gt_bbox3d_flip = gt_bbox3d.clone()
     gt_bbox3d_flip[:, 6] += np.pi
-    gt_box_corners_flip = box_utils.boxes_to_corners_3d(gt_bbox3d_flip)
+    gt_box_corners_flip = box_utils.boxes_to_corners_3d(gt_bbox3d_flip) # 反转box
     # (N, 8)
     corner_dist = torch.min(torch.norm(pred_box_corners - gt_box_corners, dim=2),
-                            torch.norm(pred_box_corners - gt_box_corners_flip, dim=2))
+                            torch.norm(pred_box_corners - gt_box_corners_flip, dim=2)) # 以角点之间距离最小值最为角点距离
     # (N, 8)
-    corner_loss = WeightedSmoothL1Loss.smooth_l1_loss(corner_dist, beta=1.0)
+    corner_loss = WeightedSmoothL1Loss.smooth_l1_loss(corner_dist, beta=1.0) # 调用smooth_l1_loss计算损失
 
     return corner_loss.mean(dim=1)
 

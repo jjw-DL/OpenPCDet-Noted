@@ -71,11 +71,11 @@ class GroupingOperation(Function):
         assert idx.shape[0] == idx_batch_cnt.sum(), \
             'idx: %s, idx_batch_cnt: %s' % (str(idx.shape), str(idx_batch_cnt))
 
-        M, nsample = idx.size()
-        N, C = features.size()
-        B = idx_batch_cnt.shape[0]
-        output = torch.cuda.FloatTensor(M, C, nsample)
-
+        M, nsample = idx.size() # 221184, 16
+        N, C = features.size() # 204916, 32
+        B = idx_batch_cnt.shape[0] # 8
+        output = torch.cuda.FloatTensor(M, C, nsample) # (221184, 32, 16)
+        # B:8 M:221184 C:32 nsample:16
         pointnet2.group_points_wrapper(B, M, C, nsample, features, features_batch_cnt, idx, idx_batch_cnt, output)
 
         ctx.for_backwards = (B, N, idx, features_batch_cnt, idx_batch_cnt)

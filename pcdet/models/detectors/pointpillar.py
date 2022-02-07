@@ -4,7 +4,7 @@ from .detector3d_template import Detector3DTemplate
 class PointPillar(Detector3DTemplate):
     def __init__(self, model_cfg, num_class, dataset):
         super().__init__(model_cfg=model_cfg, num_class=num_class, dataset=dataset)
-        # demo.py中调用的是models中__init__.py中的build_network(),返回的是整个网络模型
+        # demo.py中调用的是models中__init__.py中的build_network(),返回的是该网络的类
         # 这里调用的是Detector3DTemplate中的build_networks(),
         # 差一个s，这里返回的是各个模块的列表
         self.module_list = self.build_networks()

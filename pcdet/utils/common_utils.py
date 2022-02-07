@@ -77,13 +77,13 @@ def get_voxel_centers(voxel_coords, downsample_times, voxel_size, point_cloud_ra
         point_cloud_range:
 
     Returns:
-
+        米制中心形式的voxle中心坐标
     """
     assert voxel_coords.shape[1] == 3
     voxel_centers = voxel_coords[:, [2, 1, 0]].float()  # (xyz)
-    voxel_size = torch.tensor(voxel_size, device=voxel_centers.device).float() * downsample_times
-    pc_range = torch.tensor(point_cloud_range[0:3], device=voxel_centers.device).float()
-    voxel_centers = (voxel_centers + 0.5) * voxel_size + pc_range
+    voxel_size = torch.tensor(voxel_size, device=voxel_centers.device).float() * downsample_times # voxel坐标乘下采样倍数，还原到原始状态
+    pc_range = torch.tensor(point_cloud_range[0:3], device=voxel_centers.device).float() # 提取点云范围的前3维
+    voxel_centers = (voxel_centers + 0.5) * voxel_size + pc_range # （voxel坐标+半个voxel）* voxel_size恢复米级中心坐标，再加上点云范围前3维进行平移，平移到中心形式
     return voxel_centers
 
 
@@ -112,11 +112,11 @@ def create_logger(log_file=None, rank=0, log_level=logging.INFO):
 
 
 def set_random_seed(seed):
-    random.seed(seed)
-    np.random.seed(seed)
-    torch.manual_seed(seed)
-    torch.backends.cudnn.deterministic = True
-    torch.backends.cudnn.benchmark = False
+    random.seed(seed) # random库的随机种子
+    np.random.seed(seed) # numpy的随机种子
+    torch.manual_seed(seed) # torch的随机种子
+    torch.backends.cudnn.deterministic = True # torch后端是否确定
+    torch.backends.cudnn.benchmark = False # torch后端的benchmark
 
 
 def get_pad_params(desired_size, cur_size):
@@ -175,14 +175,14 @@ def init_dist_pytorch(tcp_port, local_rank, backend='nccl'):
     if mp.get_start_method(allow_none=True) is None:
         mp.set_start_method('spawn')
 
-    num_gpus = torch.cuda.device_count()
-    torch.cuda.set_device(local_rank % num_gpus)
+    num_gpus = torch.cuda.device_count() # 获取GPU数量
+    torch.cuda.set_device(local_rank % num_gpus) # 设置线程
     dist.init_process_group(
         backend=backend,
         init_method='tcp://127.0.0.1:%d' % tcp_port,
         rank=local_rank,
         world_size=num_gpus
-    )
+    ) # 初始化组
     rank = dist.get_rank()
     return num_gpus, rank
 
@@ -196,8 +196,8 @@ def get_dist_info():
         else:
             initialized = False
     if initialized:
-        rank = dist.get_rank()
-        world_size = dist.get_world_size()
+        rank = dist.get_rank() # 进程序号，用于进程间的通讯（rank=0 的主机为 master 节点）
+        world_size = dist.get_world_size() # 获取全局进程数
     else:
         rank = 0
         world_size = 1
@@ -229,21 +229,25 @@ def merge_results_dist(result_part, size, tmpdir):
 
 
 def scatter_point_inds(indices, point_inds, shape):
-    ret = -1 * torch.ones(*shape, dtype=point_inds.dtype, device=point_inds.device)
-    ndim = indices.shape[-1]
-    flattened_indices = indices.view(-1, ndim)
-    slices = [flattened_indices[:, i] for i in range(ndim)]
-    ret[slices] = point_inds
+    ret = -1 * torch.ones(*shape, dtype=point_inds.dtype, device=point_inds.device) # 初始化结果 (8, 21, 800, 704)
+    ndim = indices.shape[-1] # 获取坐标维度 4
+    flattened_indices = indices.view(-1, ndim) # 将坐标展平 (204916, 4)
+    # 以下两步是经典操作
+    slices = [flattened_indices[:, i] for i in range(ndim)] # 分成4个list
+    ret[slices] = point_inds # 将voxle的索引写入对应位置
     return ret
 
 
 def generate_voxel2pinds(sparse_tensor):
-    device = sparse_tensor.indices.device
-    batch_size = sparse_tensor.batch_size
-    spatial_shape = sparse_tensor.spatial_shape
-    indices = sparse_tensor.indices.long()
-    point_indices = torch.arange(indices.shape[0], device=device, dtype=torch.int32)
-    output_shape = [batch_size] + list(spatial_shape)
+    """
+    计算有效voxle在原始空间shape中的索引
+    """
+    device = sparse_tensor.indices.device # 获取device
+    batch_size = sparse_tensor.batch_size # 获取batch_size
+    spatial_shape = sparse_tensor.spatial_shape # 获取空间形状 (21, 800, 704)
+    indices = sparse_tensor.indices.long() # 获取索引
+    point_indices = torch.arange(indices.shape[0], device=device, dtype=torch.int32) # 生成索引 (204916,)
+    output_shape = [batch_size] + list(spatial_shape) # 计算输出形状 (8, 21, 800, 704)
     v2pinds_tensor = scatter_point_inds(indices, point_indices, output_shape)
     return v2pinds_tensor
 

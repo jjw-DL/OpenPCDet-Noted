@@ -90,7 +90,7 @@ class BaseBEVBackbone(nn.Module):
         """
         Args:
             data_dict:
-                spatial_features：(4,64,496,432)
+                spatial_features:(4,64,496,432)
         Returns:
         """
         spatial_features = data_dict['spatial_features']

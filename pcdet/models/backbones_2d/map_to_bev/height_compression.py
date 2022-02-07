@@ -24,7 +24,7 @@ class HeightCompression(nn.Module):
         # 结合batch，spatial_shape、indice和feature将特征还原的对应位置
         spatial_features = encoded_spconv_tensor.dense()
         N, C, D, H, W = spatial_features.shape # 4，128，2，200，150
-        spatial_features = spatial_features.view(N, C * D, H, W) # （4，256，200，150）
+        spatial_features = spatial_features.view(N, C * D, H, W) # （4，256，200，150）在高度方向上合并，将特征图压缩至BEV特征图
         # 将特征和采样尺度加入batch_dict
         batch_dict['spatial_features'] = spatial_features
         batch_dict['spatial_features_stride'] = batch_dict['encoded_spconv_tensor_stride'] # 8

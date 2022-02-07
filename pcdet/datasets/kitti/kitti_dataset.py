@@ -37,7 +37,7 @@ class KittiDataset(DatasetTemplate):
         self.sample_id_list = [x.strip() for x in open(split_dir).readlines()] if split_dir.exists() else None
         # 创建用于存放kitti信息的空列表
         self.kitti_infos = []
-        #调用函数，加载kitti数据，mode的值为：train 或者  test
+        # 调用函数，加载kitti数据，mode的值为：train 或者  test
         self.include_kitti_data(self.mode)
 
     def include_kitti_data(self, mode):
@@ -183,9 +183,9 @@ class KittiDataset(DatasetTemplate):
     def get_fov_flag(pts_rect, img_shape, calib):
         """ 
         Args:
-            pts_rect:
-            img_shape:
-            calib:
+            pts_rect: 在rect系下的点云
+            img_shape: 图像的尺寸
+            calib: 标定信息
 
         Returns:
             true, if the point in the fov
@@ -407,7 +407,7 @@ class KittiDataset(DatasetTemplate):
         Args:
             batch_dict: 
                 为字典包含batch的calib和image_shape等信息，通过frame_id索引
-            pred_dicts: list of pred_dicts 预测列表包含：
+            pred_dicts: list of pred_dicts 预测列表包含:
                 pred_boxes: (N, 7), Tensor 预测的框，包含七个信息
                 pred_scores: (N), Tensor   预测得分
                 pred_labels: (N), Tensor   预测的类比

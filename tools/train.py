@@ -67,19 +67,19 @@ def main():
     else:
         total_gpus, cfg.LOCAL_RANK = getattr(common_utils, 'init_dist_%s' % args.launcher)(
             args.tcp_port, args.local_rank, backend='nccl'
-        )
+        ) # 调用common_utils中的init_dist_pytorch方法
         dist_train = True
 
     if args.batch_size is None:
         args.batch_size = cfg.OPTIMIZATION.BATCH_SIZE_PER_GPU # batch_size: 4
     else:
         assert args.batch_size % total_gpus == 0, 'Batch size should match the number of gpus'
-        args.batch_size = args.batch_size // total_gpus
+        args.batch_size = args.batch_size // total_gpus # 根据GPU数量计算batch_size
 
     args.epochs = cfg.OPTIMIZATION.NUM_EPOCHS if args.epochs is None else args.epochs # epochs: 80
 
     if args.fix_random_seed:
-        common_utils.set_random_seed(666)
+        common_utils.set_random_seed(666) # 设定随机种子，使得随机数具有可重复性
     # /home/ggj/ObjectDetection/OpenPCDet/output/kitti_models/pointpillar/default
     output_dir = cfg.ROOT_DIR / 'output' / cfg.EXP_GROUP_PATH / cfg.TAG / args.extra_tag
     # /home/ggj/ObjectDetection/OpenPCDet/output/kitti_models/pointpillar/default/ckpt 
@@ -110,7 +110,7 @@ def main():
     log_config_to_file(cfg, logger=logger)
     # 如果单GPU训练，复制配置文件
     if cfg.LOCAL_RANK == 0:
-        os.system('cp %s %s' % (args.cfg_file, output_dir))
+        os.system('cp %s %s' % (args.cfg_file, output_dir)) # os.system调用shell命令
 
     # 初始化tensorboard
     tb_log = SummaryWriter(log_dir=str(output_dir / 'tensorboard')) if cfg.LOCAL_RANK == 0 else None

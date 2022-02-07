@@ -80,8 +80,9 @@ class AnchorHeadSingle(AnchorHeadTemplate):
             )
             self.forward_ret_dict.update(targets_dict)
 
-        # 如果不是训练模式，则直接生成进行box的预测
+        # 如果不是训练模式，则直接进行box的预测或对于双阶段网络要生成proposal(此时batch不为1)
         if not self.training or self.predict_boxes_when_training:
+            # 输入为最开始的类别和box以及方向的预测，输出为展开后的预测
             batch_cls_preds, batch_box_preds = self.generate_predicted_boxes(
                 batch_size=data_dict['batch_size'],
                 cls_preds=cls_preds, box_preds=box_preds, dir_cls_preds=dir_cls_preds

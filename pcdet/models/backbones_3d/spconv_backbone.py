@@ -146,7 +146,15 @@ class VoxelBackBone8x(nn.Module):
             spatial_shape=self.sparse_shape, # （41, 1600, 1408）
             batch_size=batch_size # 4
         )
-
+        # 始终以SparseConvTensor的形式输出
+        # 主要包括:
+        # batch_size: batch size大小
+        # features: (特征数量，特征维度)
+        # indices: (特征数量，特征索引(4维，第一维度是batch索引))
+        # spatial_shape:(z,y,x)
+        # indice_dict{(tuple:5),}:0:输出索引，1:输入索引，2:输入Rulebook索引，3:输出Rulebook索引，4:spatial shape
+        # sparity:稀疏率
+        # 在heigh_compression.py中结合batch，spatial_shape、indice和feature将特征还原的对应位置，并在高度方向合并压缩至BEV特征图
         x = self.conv_input(input_sp_tensor) # （4, 4, 41, 1600, 1408）
 
         x_conv1 = self.conv1(x) # （4, 16, 41, 1600, 1408）
@@ -159,9 +167,10 @@ class VoxelBackBone8x(nn.Module):
         out = self.conv_out(x_conv4)
         # 将输出特征图和各尺度的3d特征图存入batch_dict
         batch_dict.update({
-            'encoded_spconv_tensor': out,
-            'encoded_spconv_tensor_stride': 8
+            'encoded_spconv_tensor': out, # 输出特征
+            'encoded_spconv_tensor_stride': 8 # 下采样倍数
         })
+        # 多尺度特征
         batch_dict.update({
             'multi_scale_3d_features': {
                 'x_conv1': x_conv1,
@@ -170,6 +179,7 @@ class VoxelBackBone8x(nn.Module):
                 'x_conv4': x_conv4,
             }
         })
+        # 多尺度下采样倍数
         batch_dict.update({
             'multi_scale_3d_strides': {
                 'x_conv1': 1,

@@ -15,7 +15,7 @@ def train_one_epoch(model, optimizer, train_loader, model_func, lr_scheduler, ac
     # world size指进程总数，我们使用的卡数
     # local_rank进程内，GPU编号，非显式参数，由torch.distributed.launch内部指定
     # 比方说，rank = 3，local_rank = 0表示第3个进程内的第1块GPU
-    # 初始化tqdm
+    # 初始化tqdm（只在master节点进行）
     if rank == 0:
         pbar = tqdm.tqdm(total=total_it_each_epoch, leave=leave_pbar, desc='train', dynamic_ncols=True)
 
@@ -29,7 +29,7 @@ def train_one_epoch(model, optimizer, train_loader, model_func, lr_scheduler, ac
             print('new iters')
 
         # 更新学习率:在PyTorch 1.1.0之前的版本，学习率的调整应该被放在optimizer更新之前的
-        # 如果我们在1.1.0及之后的版本仍然将学习率的调整（即 scheduler.step()放在optimizer’s updat（即 optimizer.step()）之前
+        # 如果我们在1.1.0及之后的版本仍然将学习率的调整（即 scheduler.step()放在optimizer’s update（即 optimizer.step()）之前
         # 那么learning rate schedule 的第一个值将会被跳过
         # 所以如果某个代码是在1.1.0之前的版本下开发，但现在移植到1.1.0及之后的版本运行，发现效果变差，
         # 需要检查一下是否将scheduler.step()放在了optimizer.step()之前
@@ -83,7 +83,7 @@ def train_one_epoch(model, optimizer, train_loader, model_func, lr_scheduler, ac
                 for key, val in tb_dict.items():
                     tb_log.add_scalar('train/' + key, val, accumulated_iter)
     if rank == 0:
-        pbar.close() # 关闭进度条
+        pbar.close() # 关闭本轮epoch进度条
     return accumulated_iter # 返回累计迭代次数
 
 
@@ -97,16 +97,16 @@ def train_model(model, optimizer, train_loader, model_func, lr_scheduler, optim_
         model:模型
         optimizer: 优化器
         train_loader: Dataloader
-        model_func: 模型函数装饰器其在model的__init__.py中:主要是将数据放到模型上在返回loss
+        model_func: 模型函数装饰器，其在model的__init__.py中:主要是将数据放到模型上在返回loss
         lr_scheduler: 学习率调度器
         optim_cfg: 优化器配置
         start_epoch: 起始epoch
         total_epochs: 总共epoch数量
         start_iter: 起始迭代数
-        rank: 
+        rank:进程号
         tb_log: tensorboad的log
         ckpt_save_dir: checkpoint存储文件夹路径
-        train_sampler:
+        train_sampler: 训练数据采样器 DistributedSampler
         lr_warmup_scheduler: 学习率热身调度器
         ckpt_save_interval: checkpoint存储间隔，默认为1
         max_ckpt_save_num: 最大的checkpoint存储数量，默认为50
@@ -121,7 +121,7 @@ def train_model(model, optimizer, train_loader, model_func, lr_scheduler, optim_
             total_it_each_epoch = len(train_loader) // max(total_epochs, 1)
 
         dataloader_iter = iter(train_loader) # 将Dataloder转换为迭代格式
-        for cur_epoch in tbar: # 到这里会显示进度条
+        for cur_epoch in tbar: # 到这里会显示进度条，cur_epoch会自动获取tbar中的值
             if train_sampler is not None:
                 train_sampler.set_epoch(cur_epoch)
 
@@ -147,6 +147,7 @@ def train_model(model, optimizer, train_loader, model_func, lr_scheduler, optim_
             trained_epoch = cur_epoch + 1
             if trained_epoch % ckpt_save_interval == 0 and rank == 0:
                 # 查看ckpt文件夹中的ckpt文件
+                # glob会包含全部路径，os.listdir只会包含其中的文件名
                 ckpt_list = glob.glob(str(ckpt_save_dir / 'checkpoint_epoch_*.pth'))
                 # 按照时间排序
                 # os.path.getmtime用于获取指定路径文件最后的修改时间
@@ -167,7 +168,7 @@ def train_model(model, optimizer, train_loader, model_func, lr_scheduler, optim_
 
 def model_state_to_cpu(model_state):
     # 只有分布式训练需要
-    model_state_cpu = type(model_state)()  # ordered dict
+    model_state_cpu = type(model_state)()  # ordered dict,字典类型
     # 将model_state的值转到cpu上
     for key, val in model_state.items():
         model_state_cpu[key] = val.cpu()
@@ -179,7 +180,7 @@ def checkpoint_state(model=None, optimizer=None, epoch=None, it=None):
     optim_state = optimizer.state_dict() if optimizer is not None else None
     if model is not None:
         if isinstance(model, torch.nn.parallel.DistributedDataParallel):
-            model_state = model_state_to_cpu(model.module.state_dict())
+            model_state = model_state_to_cpu(model.module.state_dict()) # 将model_state放到cpu上
         else:
             # 2.获取模型state_dict
             model_state = model.state_dict()

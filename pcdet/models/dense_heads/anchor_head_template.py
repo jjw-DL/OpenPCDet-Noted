@@ -129,7 +129,7 @@ class AnchorHeadTemplate(nn.Module):
         positives = box_cls_labels > 0 # (4,321408) 前景anchor
         negatives = box_cls_labels == 0 # (4,321408) 背景anchor
         negative_cls_weights = negatives * 1.0 # 背景anchor赋予权重
-        cls_weights = (negative_cls_weights + 1.0 * positives).float() # 背景 + 前景权重=分类损失权重
+        cls_weights = (negative_cls_weights + 1.0 * positives).float() # 背景 + 前景权重=分类损失权重 # (4,321408)
         reg_weights = positives.float() # 回归损失权重
         # 如果只有一类
         if self.num_class == 1:
@@ -156,6 +156,9 @@ class AnchorHeadTemplate(nn.Module):
         one_hot_targets = one_hot_targets[..., 1:] # (4, 321408, 3) 不计算背景分类损失
 
         # 计算分类损失
+        ######################################################################
+        # one_hot_targets在计算通过mask将不care的box的类别设置为0，起到了mask的作用
+        ######################################################################
         cls_loss_src = self.cls_loss_func(cls_preds, one_hot_targets, weights=cls_weights)  # (4, 321408, 3)
         cls_loss = cls_loss_src.sum() / batch_size # 求和并除以batch数目
 
@@ -218,6 +221,11 @@ class AnchorHeadTemplate(nn.Module):
                                    box_preds.shape[-1]) # (4, 321408, 7)
         # sin(a - b) = sina*cosb - cosa*sinb
         box_preds_sin, reg_targets_sin = self.add_sin_difference(box_preds, box_reg_targets) # (4, 321408, 7)
+        ############################################################################
+        # 在计算回归损失的时候，reg_targets_sin在assign的时候只计算了前景anchor和target的编码
+        # 这里通过reg_weights控制只计算前景的回归损失
+        # 损失的计算一般在帧内是忽略形状的都拉成一维度，方便计算，而且pred和target的输入维度要相同
+        ############################################################################
         loc_loss_src = self.reg_loss_func(box_preds_sin, reg_targets_sin, weights=reg_weights)  
         loc_loss = loc_loss_src.sum() / batch_size
 
@@ -237,6 +245,7 @@ class AnchorHeadTemplate(nn.Module):
             dir_logits = box_dir_cls_preds.view(batch_size, -1, self.model_cfg.NUM_DIR_BINS) # 方向预测值 (4, 321408, 2)
             weights = positives.type_as(dir_logits) # 只要正样本的方向预测值 (4, 321408)
             weights /= torch.clamp(weights.sum(-1, keepdim=True), min=1.0) # (4, 321408) 除正例数量，使得每个样本的损失与样本中目标的数量无关
+            # 这里的weights同样起到了mask的作用
             dir_loss = self.dir_loss_func(dir_logits, dir_targets, weights=weights)
             dir_loss = dir_loss.sum() / batch_size
             dir_loss = dir_loss * self.model_cfg.LOSS_CONFIG.LOSS_WEIGHTS['dir_weight'] # 损失权重，dir_weight: 0.2

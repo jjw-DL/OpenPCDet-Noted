@@ -80,7 +80,7 @@ def eval_single_ckpt(model, test_loader, args, eval_output_dir, logger, epoch_id
 
 def get_no_evaluated_ckpt(ckpt_dir, ckpt_record_file, args):
     """
-    获取没有别评估的checkpoint
+    获取没有被评估的checkpoint
     Args:
         ckpt_dir: 存储checkpoint的文件夹
         ckpt_record_file: checkpoint记录文件路径
